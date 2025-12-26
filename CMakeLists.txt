@@ -14,4 +14,6 @@ add_executable(basicSocket ./basicSocket.cpp)
 add_executable(basicEchoServer ./basicEchoServer.cpp)
 add_executable(basicEchoClient ./basicEchoClient.cpp)
 
+add_executable(asyncEchoServer ./asyncEchoServer.cpp)
+
 target_link_libraries(main ${Boost_LIBARIES})
