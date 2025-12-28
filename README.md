@@ -2,7 +2,9 @@
 This is a simple but high performance framework of a TCP C++ server. Only to offer some callback functions, you can setup a simple server very quickly.
 
 ## Quick Start
-You need to seed port when initialize the server and set callback functions before it get started.
+You need to seed port when initialize the server and set callback functions map before it get started.
+When a new packet arrives the server, logic system will call the corresponding callback function according to its type.
+
 `LogicSystem::CallbackFunction` accepted 3 parameters
 1. `std::shared_ptr<Session> session`
     It contains the information of the client and the session.
@@ -68,7 +70,8 @@ Server server(10086. s);
 
 ## How to build client
 In the this framework, we provide a simple Client class to build a simple client. You can check the example's for reference.
-However, all the network IO are synchronous, you can build customized client by any method you like, as long as you follow the TLV format packet we mention bellow.
+
+However, all the network IO are synchronous, you can build customized client by any method you like, as long as you follow the TLV format packet we mentioned [before](##Packet).
 
 ## Examples
 - [Echo server and client](./example/echo)
