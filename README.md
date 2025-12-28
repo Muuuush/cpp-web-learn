@@ -1,8 +1,8 @@
 # CimpleServer
-This is a simple but high performance framework of a TCP C++ server. Only to offer some callback functions, you can setup a simple server very quickly.
+This is a simple but high performance framework of a TCP C++ server. Only need some callback functions, you can setup a simple server very quickly.
 
 ## Quick Start
-You need to seed port when initialize the server and set callback functions map before it get started.
+You need to set port when initialize the server, and set callback functions map before the server get started.
 When a new packet arrives the server, logic system will call the corresponding callback function according to its type.
 
 `LogicSystem::CallbackFunction` accepted 3 parameters
