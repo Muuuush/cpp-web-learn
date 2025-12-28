@@ -71,7 +71,7 @@ Server server(10086. s);
 ## How to build client
 In the this framework, we provide a simple Client class to build a simple client. You can check the example's for reference.
 
-However, all the network IO are synchronous, you can build customized client by any method you like, as long as you follow the TLV format packet we mentioned [before](##packet).
+However, all the network IO are synchronous, you can build customized client by any method you like, as long as you follow the TLV format packet we mentioned [before](#packet).
 
 ## Examples
 - [Echo server and client](./example/echo)
