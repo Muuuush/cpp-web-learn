@@ -1,7 +1,7 @@
 #include "CimpleServer.hpp"
 #include <iostream>
 
-void recieveHello(std::shared_ptr<Session> session, uint16_t type, const std::string& message) {
+void recieveHello(std::shared_ptr<Session> session, uint16_t type, std::string_view message) {
     std::cout << "Receive: \"" << message << "\" from " << session->getRemoteEndpoint() << std::endl;
 }
 

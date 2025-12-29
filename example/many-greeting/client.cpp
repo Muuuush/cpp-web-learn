@@ -14,18 +14,14 @@ void sendGreeting(int greetingCnt) {
         do
             client.connect(serverEP, ec);
         while (ec.failed());
-        SendNode hello(0, "Hello server!");
-        SendNode hi(1, "Hi server!");
+        TLVPacket hello(0, "Hello server!");
+        TLVPacket hi(1, "Hi server!");
         while (greetingCnt--) {
             if (greetingCnt % 2 == 0) {
-                do
-                    client.sendPacket(hello);
-                while (ec.failed());
+                client.sendPacket(hello);
                 successHello++;
             } else {
-                do
-                    client.sendPacket(hi);
-                while (ec.failed());
+                client.sendPacket(hi);
                 successHi++;
             }
         }

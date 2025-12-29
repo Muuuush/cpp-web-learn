@@ -15,10 +15,10 @@ Session::Session(Server* server)
 Session::~Session() {}
 
 void Session::startRecieving() {
-    auto node = std::make_shared<RecieveNode>();
+    auto node = std::make_shared<TLVPacket>();
     async_read(
         this->socket,
-        buffer(node->data, PacketNode::TYPE_SECTION + PacketNode::LENGTH_SECTION),
+        buffer(node->data, node->HEADER_SECTION),
         std::bind(
             &Session::HandleHead,
             shared_from_this(),
@@ -28,10 +28,10 @@ void Session::startRecieving() {
     );
 }
 
-void Session::send(SendNode node) {
+void Session::send(TLVPacket node) {
     async_write(
         socket,
-        buffer(node.data, node.totalLength),
+        buffer(node.data, node.HEADER_SECTION + node.getLength()),
         std::bind(
             &Session::HandleSend,
             shared_from_this(),
@@ -44,7 +44,7 @@ void Session::close() {
     server->sessions.erase(uuid);
 }
 
-void Session::HandleHead(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<RecieveNode> node) {
+void Session::HandleHead(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<TLVPacket> node) {
     if (ec.failed()) {
         if (ec == error::eof)
             spdlog::debug("Connection closed by peer. ({})", session->toString());
@@ -52,22 +52,30 @@ void Session::HandleHead(std::shared_ptr<Session> session, const boost::system::
             spdlog::error("{}, from {}", ec.what(), session->toString());
         session->close();
     } else {
-        node->totalLength = detail::socket_ops::network_to_host_short(*reinterpret_cast<uint16_t*>(node->data + PacketNode::TYPE_SECTION));
-        node->currLength = PacketNode::TYPE_SECTION + PacketNode::LENGTH_SECTION;
-        async_read(
-            session->socket,
-            buffer(node->data + node->currLength, node->totalLength - node->currLength),
-            std::bind(
-                &Session::HandleRecieve,
-                session,
-                std::placeholders::_1,
-                node
-            )
-        );
+        uint16_t tag = node->getTag();
+
+        if (!LogicSystem::getCallbacks().contains(tag)) {
+            spdlog::error("Unknown type: {}, from {}", tag, session->toString());
+            session->close();
+        } else if (node->getLength() > node->MAX_LENGTH) {
+            spdlog::warn("Length exceeding message from {}, the session will be closed.", ec.what(), session->toString());
+            session->close();
+        } else {
+            async_read(
+                session->socket,
+                buffer(node->data + node->HEADER_SECTION, node->getLength()),
+                std::bind(
+                    &Session::HandleRecieve,
+                    session,
+                    std::placeholders::_1,
+                    node
+                )
+            );
+        }
     }
 }
 
-void Session::HandleRecieve(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<RecieveNode> node) {
+void Session::HandleRecieve(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<TLVPacket> node) {
     if (ec.failed()) {
         if (ec == error::eof)
             spdlog::debug("Connection closed by peer. ({})", session->toString());
@@ -75,7 +83,8 @@ void Session::HandleRecieve(std::shared_ptr<Session> session, const boost::syste
             spdlog::error("{}, from {}", ec.what(), session->toString());
         session->close();
     } else {
-        LogicSystem::getInstance(session->server->logicQueueCapacity, session->server->logicWorkerNum)->registerNode(LogicNode(session, *node));
+        LogicSystem::getInstance(session->server->logicQueueCapacity, session->server->logicWorkerNum)
+            ->registerNode(LogicNode(session, std::move(*node)));
         session->startRecieving();
     }
 }

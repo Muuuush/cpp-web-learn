@@ -1,9 +1,9 @@
 #include "CimpleServer.hpp"
 #include <iostream>
 
-void echo(std::shared_ptr<Session> session, uint16_t type, const std::string& message) {
+void echo(std::shared_ptr<Session> session, uint16_t type, std::string_view message) {
     std::cout << "Receive: \"" << message << "\" from " << session->getRemoteEndpoint() << std::endl;
-    session->send(SendNode(type, message));
+    session->send(TLVPacket(type, message));
 }
 
 int main() {

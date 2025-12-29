@@ -2,20 +2,28 @@
 
 #include <boost/asio.hpp>
 
-LogicNode::LogicNode(std::shared_ptr<Session> session, uint16_t type, std::string_view message) noexcept
-    : session(session), type(type), message(message) {}
+LogicNode::LogicNode(const LogicNode& other) noexcept
+    : session(other.session), tlvPacket(std::make_unique<TLVPacket>(*other.tlvPacket)) {}
 
-LogicNode::LogicNode(std::shared_ptr<Session> session, const RecieveNode& node) noexcept
-    : session(session), type(boost::asio::detail::socket_ops::network_to_host_short(*reinterpret_cast<uint16_t*>(node.data))),
-    message(node.data + PacketNode::HEADER_SECTION, node.totalLength - (PacketNode::HEADER_SECTION)) {}
+LogicNode::LogicNode(std::shared_ptr<Session> session, const TLVPacket& packet) noexcept
+    : session(session), tlvPacket(std::make_unique<TLVPacket>(packet)) {}
+
+LogicNode::LogicNode(std::shared_ptr<Session> session, TLVPacket&& packet) noexcept
+    : session(session), tlvPacket(std::make_unique<TLVPacket>(std::forward<TLVPacket>(packet))) {}
 
 LogicNode::LogicNode(LogicNode&& rvalue) noexcept
-    : session(rvalue.session), type(rvalue.type), message(std::move(rvalue.message)) {}
+    : session(rvalue.session), tlvPacket(std::move(rvalue.tlvPacket)) {}
+
+LogicNode& LogicNode::operator=(const LogicNode& lvalue) noexcept {
+    if (&lvalue == this) return *this;
+    session = lvalue.session;
+    tlvPacket.reset(new TLVPacket(*lvalue.tlvPacket));
+    return *this;
+}
 
 LogicNode& LogicNode::operator=(LogicNode&& rvalue) noexcept {
     if (&rvalue == this) return *this;
-    this->session = rvalue.session;
-    this->type = rvalue.type;
-    this->message = std::move(rvalue.message);
+    session = rvalue.session;
+    tlvPacket = std::move(rvalue.tlvPacket);
     return *this;
 }

@@ -10,13 +10,13 @@
 class LogicSystem : public Singleton<LogicSystem> {
     friend Singleton<LogicSystem>;
 public:
-    using CallbackFunction = std::function<void(std::shared_ptr<Session> session, uint16_t type, std::string message)>;
+    using CallbackFunction = std::function<void(std::shared_ptr<Session> session, uint16_t type, std::string_view message)>;
 private:
     LogicSystem(int capacity, int workerNum);
 
     void worker();
 public:
-    void registerNode(const LogicNode& node);
+    void registerNode(LogicNode&& node);
     static std::unordered_map<uint16_t, CallbackFunction> getCallbacks() noexcept;
     static void setCallbacks(std::unordered_map<uint16_t, CallbackFunction> value) noexcept;
 

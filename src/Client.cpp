@@ -1,4 +1,5 @@
 #include "Client.hpp"
+#include <iostream>
 
 using namespace boost::asio;
 
@@ -12,54 +13,49 @@ void Client::connect(boost::asio::ip::tcp::endpoint serverEP, boost::system::err
     socket.connect(serverEP, ec);
 }
 
-void Client::sendPacket(const SendNode& node) {
+void Client::sendPacket(const TLVPacket& node) {
     write(
         socket,
-        buffer(node.data, node.totalLength)
+        buffer(node.data, node.HEADER_SECTION + node.getLength())
     );
 }
 
-void Client::sendPacket(const SendNode& node, boost::system::error_code& ec) {
+void Client::sendPacket(const TLVPacket& node, boost::system::error_code& ec) {
     write(
         socket,
-        buffer(node.data, node.totalLength),
+        buffer(node.data, node.HEADER_SECTION + node.getLength()),
         ec
     );
 }
 
-RecieveNode Client::recievePacket() {
-    RecieveNode node;
+TLVPacket Client::recievePacket() {
+    TLVPacket node;
     read(
         this->socket,
-        buffer(node.data, PacketNode::HEADER_SECTION)
+        buffer(node.data, node.HEADER_SECTION)
     );
-    node.totalLength = detail::socket_ops::network_to_host_short(*reinterpret_cast<uint16_t*>(node.data + PacketNode::TYPE_SECTION));
-    node.currLength = PacketNode::HEADER_SECTION;
     read(
         this->socket,
-        buffer(node.data + node.currLength, node.totalLength - node.currLength)
+        buffer(node.data + node.HEADER_SECTION, node.getLength())
     );
-    node.currLength = node.totalLength;
     return node;
 }
 
-RecieveNode Client::recievePacket(boost::system::error_code& ec) {
-    RecieveNode node;
+TLVPacket Client::recievePacket(boost::system::error_code& ec) {
+    TLVPacket node;
     read(
         this->socket,
-        buffer(node.data, PacketNode::TYPE_SECTION + PacketNode::LENGTH_SECTION),
+        buffer(node.data, node.HEADER_SECTION),
         ec
     );
-    if (ec.failed()) return RecieveNode();
+    if (ec.failed()) return TLVPacket();
 
-    node.totalLength = detail::socket_ops::network_to_host_short(*reinterpret_cast<uint16_t*>(node.data + PacketNode::TYPE_SECTION));
-    node.currLength = PacketNode::TYPE_SECTION + PacketNode::LENGTH_SECTION;
     read(
         this->socket,
-        buffer(node.data + node.currLength, node.totalLength - node.currLength)
+        buffer(node.data + node.HEADER_SECTION, node.getLength()),
+        ec
     );
-    if (ec.failed()) return RecieveNode();
+    if (ec.failed()) return TLVPacket();
 
-    node.currLength = node.totalLength;
     return node;
 }

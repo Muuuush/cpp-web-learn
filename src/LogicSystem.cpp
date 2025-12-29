@@ -1,4 +1,5 @@
 #include "LogicSystem.hpp"
+
 #include <spdlog/spdlog.h>
 
 LogicSystem::LogicSystem(int capacity, int workerNum)
@@ -24,27 +25,31 @@ void LogicSystem::worker() {
         empty.notify_one();
 
         // handle node
-        if (callbacks.contains(node.type)) {
+        std::shared_lock callbackLock(callbacksMutex);
+        if (callbacks.contains(node.getTag())) {
             try {
-                callbacks[node.type](node.session, node.type, node.message);
+                callbacks[node.getTag()](node.session, node.getTag(), node.getMessage());
             } catch (const std::exception& e) {
                 spdlog::error("{}, from {}", e.what(), node.session->toString());
+                node.session->close();
             } catch (...) {
                 spdlog::error("Unknown error, from {}", node.session->toString());
+                node.session->close();
             }
         } else {
-            spdlog::error("Unknown type: {}, from {}", node.type,node.session->toString());
+            spdlog::error("Unknown type: {}, from {}", node.getTag(), node.session->toString());
+            node.session->close();
         }
     }
 }
 
-void LogicSystem::registerNode(const LogicNode& node) {
+void LogicSystem::registerNode(LogicNode&& node) {
     if (stop) return; // if stop, don't receive new node
 
     std::unique_lock lock(queueMutex);
     while (fill >= capacity)
         empty.wait(lock);
-    logicQueue[tail] = node;
+    logicQueue[tail] = std::forward<LogicNode>(node);
     fill++;
     tail = (tail + 1) % capacity;
     full.notify_one();

@@ -13,7 +13,8 @@ public:
     Session(Server* server);
     ~Session();
 
-    void send(SendNode node);
+    void send(TLVPacket node);
+    void close();
 
     boost::uuids::uuid getUUID() const noexcept { return uuid; }
     boost::asio::ip::tcp::endpoint getRemoteEndpoint() const noexcept { return socket.remote_endpoint(); }
@@ -25,10 +26,9 @@ public:
 
 private:
     void startRecieving();
-    void close();
 
-    static void HandleHead(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<RecieveNode> node);
-    static void HandleRecieve(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<RecieveNode> node);
+    static void HandleHead(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<TLVPacket> node);
+    static void HandleRecieve(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<TLVPacket> node);
     static void HandleSend(std::shared_ptr<Session> session, const boost::system::error_code& ec);
 
 private:

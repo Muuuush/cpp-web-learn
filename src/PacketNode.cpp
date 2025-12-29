@@ -1,67 +1,54 @@
 #include "PacketNode.hpp"
 
-#include <boost/asio.hpp>
 #include <cstring>
+#include <boost/stacktrace.hpp>
 #include <spdlog/spdlog.h>
 
-PacketNode::~PacketNode() noexcept {
+TLVPacket::TLVPacket() noexcept {
+    data = new char[HEADER_SECTION + MAX_LENGTH]{};
+}
+
+TLVPacket::TLVPacket(uint16_t tag, const char* value, size_t valueLength) noexcept {
+    if (valueLength > MAX_LENGTH) {
+        spdlog::warn("Node is too long to send. It will be truncated.");
+        valueLength = MAX_LENGTH;
+    }
+
+    this->data = new char[HEADER_SECTION + valueLength];
+    *reinterpret_cast<uint16_t*>(this->data) = boost::asio::detail::socket_ops::host_to_network_short(tag);
+    *reinterpret_cast<uint16_t*>(this->data + TAG_SECTION) = boost::asio::detail::socket_ops::host_to_network_short(valueLength);
+    std::memcpy(this->data + HEADER_SECTION, value, valueLength);
+}
+
+TLVPacket::TLVPacket(uint16_t tag, std::string_view value) noexcept : TLVPacket(tag, value.data(), value.length()) {}
+
+TLVPacket::~TLVPacket() noexcept {
     delete data;
 }
 
-PacketNode::PacketNode(const PacketNode& other) noexcept {
-    currLength = other.currLength;
-    totalLength = other.totalLength;
-    data = new char[totalLength];
-    std::memcpy(data, other.data, totalLength);
+TLVPacket::TLVPacket(const TLVPacket& other) noexcept {
+    uint16_t valueLength = other.getLength();
+    data = new char[HEADER_SECTION + valueLength];
+    std::memcpy(data, other.data, HEADER_SECTION + valueLength);
 }
 
-PacketNode::PacketNode(PacketNode&& rvalue) noexcept {
-    currLength = rvalue.currLength;
-    totalLength = rvalue.totalLength;
+TLVPacket::TLVPacket(TLVPacket&& rvalue) noexcept {
     data = rvalue.data;
     rvalue.data = nullptr;
 }
 
-PacketNode& PacketNode::operator=(const PacketNode& other) noexcept {
+TLVPacket& TLVPacket::operator=(const TLVPacket& other) noexcept {
     if (&other == this) return *this;
-    currLength = other.currLength;
-    totalLength = other.totalLength;
-    data = new char[totalLength];
-    std::memcpy(data, other.data, totalLength);
+    delete data;
+    uint16_t valueLength = other.getLength();
+    data = new char[HEADER_SECTION + valueLength];
+    std::memcpy(data, other.data, HEADER_SECTION + valueLength);
     return *this;
 }
 
-PacketNode& PacketNode::operator=(PacketNode&& rvalue) noexcept {
+TLVPacket& TLVPacket::operator=(TLVPacket&& rvalue) noexcept {
     if (&rvalue == this) return *this;
-    currLength = rvalue.currLength;
-    totalLength = rvalue.totalLength;
     data = rvalue.data;
     rvalue.data = nullptr;
     return *this;
-}
-
-std::string PacketNode::getMessage() {
-    return std::string(data + HEADER_SECTION, totalLength - HEADER_SECTION);
-}
-
-SendNode::SendNode(uint16_t type, const char* data, size_t data_length) noexcept {
-    if (data_length > MAX_DATA_LENGTH) {
-        spdlog::warn("Node is too long to send. It will be truncated.");
-        data_length = MAX_DATA_LENGTH;
-    }
-
-    this->data = new char[HEADER_SECTION + data_length];
-    this->currLength = 0;
-    this->totalLength = HEADER_SECTION + data_length;
-    *reinterpret_cast<uint16_t*>(this->data) = boost::asio::detail::socket_ops::host_to_network_short(type);
-    *reinterpret_cast<uint16_t*>(this->data + TYPE_SECTION) = boost::asio::detail::socket_ops::host_to_network_short(totalLength);
-    std::memcpy(this->data + HEADER_SECTION, data, data_length);
-}
-
-SendNode::SendNode(uint16_t type, std::string_view data) noexcept : SendNode(type, data.data(), data.length()) {}
-
-RecieveNode::RecieveNode() noexcept {
-    data = new char[MAX_LENGTH]{};
-    currLength = 0;
-    totalLength = 0;
 }

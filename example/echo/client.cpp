@@ -12,7 +12,7 @@ int main() {
     std::string input;
     std::cout << ">> ";
     std::getline(std::cin, input);
-    SendNode node(0, input);
+    TLVPacket node(0, input);
     client.sendPacket(node);
     auto recieve = client.recievePacket();
     std::cout << "echo: " << recieve.getMessage() << std::endl;
