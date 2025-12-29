@@ -78,6 +78,9 @@ However, all the network IO are synchronous, you can build customized client by 
 - [Hello server and client](./example/hello)
 - [Server stress testing and example of multi-threaded logic processing server](./example/many-greeting)
 
+## Server Structure
+![structure](./docs/structure.drawio.png)
+
 ## Dependency
 - `Boost.Asio` (Boost Software License 1.0)
 - `spdlog` (MIT License)
