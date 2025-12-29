@@ -40,9 +40,9 @@ int main() {
 ## Packet
 This framework uses TLV (Tag-Lenth-Value) format packet.
 
-|   Tag   | Length  |      Value       |
-|:-------:|:-------:|:----------------:|
-| 2 Bytes | 2 Bytes | Max 65,531 Bytes |
+|   Tag   | Length  |     Value      |
+|:-------:|:-------:|:--------------:|
+| 2 Bytes | 2 Bytes | Max 4096 Bytes |
 
 The `tag` of the packet will determine the callback function to be called in the server, via the hash map.
 
@@ -50,7 +50,7 @@ The `tag` of the packet will determine the callback function to be called in the
 - High-performance network I/O
 - Decoupled logic layer and network I/O
 - Supporting multi-threaded logic processing (only one thread by default, you can changed it by passing the `ServerSetting` parameter when initialize the `Server`)
-- Dynamic update callback functions (This will pause the logic process temporally, please pay attention)
+- Dynamic update callback functions (This will pause the logic processing temporally, please pay attention)
 
 ## Setup Setting
 You can change the setting of server via `ServerSetting`
@@ -79,6 +79,8 @@ However, all the network IO are synchronous, you can build customized client by 
 - [Server stress testing and example of multi-threaded logic processing server](./example/many-greeting)
 
 ## Server Structure
+A new connection will be distributed to a random IO context thread in the context pool. Then a session will be created to receive the packets. After receiving a whole packet, the session will deliver a new logic node to the queue in the logic system. In the logic system, there are one or several worker thread(s) handling the node in the queue by call the callback functions corresponding to the packet tag.
+
 ![structure](./docs/structure.drawio.png)
 
 ## Dependency
