@@ -19,12 +19,12 @@ When a new packet arrives the server, logic system will call the corresponding c
 
 A simple echo server example.
 ``` cpp
-#include "CimpleServer.hpp"
-#include <iostream>
-
 void echo(std::shared_ptr<Session> session, uint16_t tag, std::string_view message) {
     std::cout << "Receive: \"" << message << "\" from " << session->getRemoteEndpoint() << std::endl;
-    session->send(TLVPacket(tag, message));
+    std::optional<boost::system::system_error> result = session->send(TLVPacket(tag, message));
+    if (result.has_value()) {
+        std::cout << "Echo failed to " << session->getRemoteEndpoint() << std::endl;
+    }
 }
 
 int main() {
@@ -60,6 +60,7 @@ struct ServerSetting {
     int ioContextPoolSize = std::thread::hardware_concurrency();
     int logicQueueCapacity = 1024;
     int logicWorkerNum = 1;
+    std::function<void()> stopCallback;
     ServerSetting() = default;
 };
 // Then set up the server like:

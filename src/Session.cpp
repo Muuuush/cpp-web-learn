@@ -14,86 +14,55 @@ Session::Session(Server* server)
 
 Session::~Session() {}
 
-void Session::startRecieving() {
-    auto node = std::make_shared<TLVPacket>();
-    async_read(
-        this->socket,
-        buffer(node->data, node->HEADER_SECTION),
-        std::bind(
-            &Session::HandleHead,
-            shared_from_this(),
-            std::placeholders::_1,
-            node
-        )
-    );
+awaitable<void> Session::startReceiving() {
+    try {
+        while (true) {
+            TLVPacket node;
+            co_await async_read(socket, buffer(node.data, node.HEADER_SECTION), use_awaitable);
+
+            uint16_t tag = node.getTag();
+            if (!LogicSystem::getCallbacks().contains(tag)) {
+                throw std::runtime_error("Unknown tag packet");
+            } else if (node.getLength() > node.MAX_LENGTH) {
+                throw std::runtime_error("Length exceeding packet");
+            }
+
+            co_await async_read(socket, buffer(node.data + node.HEADER_SECTION, node.getLength()), use_awaitable);
+            LogicSystem::getInstance(server->logicQueueCapacity, server->logicWorkerNum)
+                ->registerNode(LogicNode(shared_from_this(), std::move(node)));
+        }
+    } catch (const boost::system::system_error& e) {
+        if (e.code() == error::eof) {
+            spdlog::debug("Connection closed by peer. {}", toString());
+        } else {
+            spdlog::error("{}, from {}", e.what(), toString());
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("{}, from {}", e.what(), toString());
+    }
+    this->close();
 }
 
-void Session::send(TLVPacket node) {
-    async_write(
-        socket,
-        buffer(node.data, node.HEADER_SECTION + node.getLength()),
-        std::bind(
-            &Session::HandleSend,
-            shared_from_this(),
-            std::placeholders::_1
-        )
-    );
+std::optional<boost::system::system_error> Session::send(TLVPacket node) {
+    try {
+        write(socket, buffer(node.data, node.HEADER_SECTION + node.getLength()));
+    } catch (const boost::system::system_error& e) {
+        this->close();
+        return e;
+    }
+    return std::nullopt;
+}
+
+awaitable<std::optional<boost::system::system_error>> Session::asyncSend(TLVPacket node) {
+    try {
+        co_await async_write(socket, buffer(node.data, node.HEADER_SECTION + node.getLength()), use_awaitable);
+    } catch (const boost::system::system_error& e) {
+        this->close();
+        co_return e;
+    }
+    co_return std::nullopt;
 }
 
 void Session::close() {
     server->sessions.erase(uuid);
-}
-
-void Session::HandleHead(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<TLVPacket> node) {
-    if (ec.failed()) {
-        if (ec == error::eof)
-            spdlog::debug("Connection closed by peer. ({})", session->toString());
-        else
-            spdlog::error("{}, from {}", ec.what(), session->toString());
-        session->close();
-    } else {
-        uint16_t tag = node->getTag();
-
-        if (!LogicSystem::getCallbacks().contains(tag)) {
-            spdlog::error("Unknown tag: {}, from {}", tag, session->toString());
-            session->close();
-        } else if (node->getLength() > node->MAX_LENGTH) {
-            spdlog::warn("Length exceeding message from {}, the session will be closed.", ec.what(), session->toString());
-            session->close();
-        } else {
-            async_read(
-                session->socket,
-                buffer(node->data + node->HEADER_SECTION, node->getLength()),
-                std::bind(
-                    &Session::HandleRecieve,
-                    session,
-                    std::placeholders::_1,
-                    node
-                )
-            );
-        }
-    }
-}
-
-void Session::HandleRecieve(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<TLVPacket> node) {
-    if (ec.failed()) {
-        if (ec == error::eof)
-            spdlog::debug("Connection closed by peer. ({})", session->toString());
-        else
-            spdlog::error("{}, from {}", ec.what(), session->toString());
-        session->close();
-    } else {
-        LogicSystem::getInstance(session->server->logicQueueCapacity, session->server->logicWorkerNum)
-            ->registerNode(LogicNode(session, std::move(*node)));
-        session->startRecieving();
-    }
-}
-
-void Session::HandleSend(std::shared_ptr<Session> session, const boost::system::error_code& ec) {
-    if (ec.failed()) {
-        spdlog::error("{}, from {}", ec.what(), session->toString());
-        session->close();
-    } else {
-        // send successfully
-    }
 }

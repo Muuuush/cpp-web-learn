@@ -3,7 +3,10 @@
 
 void echo(std::shared_ptr<Session> session, uint16_t tag, std::string_view message) {
     std::cout << "Receive: \"" << message << "\" from " << session->getRemoteEndpoint() << std::endl;
-    session->send(TLVPacket(tag, message));
+    std::optional<boost::system::system_error> result = session->send(TLVPacket(tag, message));
+    if (result.has_value()) {
+        std::cout << "Echo failed to " << session->getRemoteEndpoint() << std::endl;
+    }
 }
 
 int main() {

@@ -10,11 +10,13 @@ int main() {
     boost::system::error_code ec;
     client.connect(serverEP, ec);
     std::string input;
-    std::cout << ">> ";
-    std::getline(std::cin, input);
-    TLVPacket node(0, input);
-    client.sendPacket(node);
-    auto recieve = client.recievePacket();
-    std::cout << "echo: " << recieve.getMessage() << std::endl;
+    while (true) {
+        std::cout << ">> ";
+        std::getline(std::cin, input);
+        TLVPacket node(0, input);
+        client.sendPacket(node);
+        auto recieve = client.recievePacket();
+        std::cout << "echo: " << recieve.getMessage() << std::endl;
+    }
     return 0;
 }

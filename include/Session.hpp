@@ -13,7 +13,9 @@ public:
     Session(Server* server);
     ~Session();
 
-    void send(TLVPacket node);
+    std::optional<boost::system::system_error> send(TLVPacket node);
+    [[nodiscard("Awaitable corountine")]]
+    boost::asio::awaitable<std::optional<boost::system::system_error>> asyncSend(TLVPacket node);
     void close();
 
     boost::uuids::uuid getUUID() const noexcept { return uuid; }
@@ -25,11 +27,7 @@ public:
     }
 
 private:
-    void startRecieving();
-
-    static void HandleHead(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<TLVPacket> node);
-    static void HandleRecieve(std::shared_ptr<Session> session, const boost::system::error_code& ec, std::shared_ptr<TLVPacket> node);
-    static void HandleSend(std::shared_ptr<Session> session, const boost::system::error_code& ec);
+    boost::asio::awaitable<void>startReceiving();
 
 private:
     boost::uuids::uuid uuid;

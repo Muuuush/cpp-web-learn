@@ -5,6 +5,7 @@
 #include "LogicNode.hpp"
 #include <functional>
 #include <shared_mutex>
+#include <thread>
 #include <unordered_map>
 
 class LogicSystem : public Singleton<LogicSystem> {
@@ -26,11 +27,11 @@ private:
     inline static std::unordered_map<uint16_t, CallbackFunction> callbacks;
     inline static std::shared_mutex callbacksMutex;
     std::vector<LogicNode> logicQueue;
-    int capacity;
+    const int capacity;
     int head;
     int tail;
     int fill;
-    std::vector<std::thread> workers;
+    std::vector<std::jthread> workers;
     std::mutex queueMutex;
     std::condition_variable empty;
     std::condition_variable full;

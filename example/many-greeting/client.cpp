@@ -31,7 +31,7 @@ void sendGreeting(int greetingCnt) {
     }
 }
 int main() {
-    const int greetingPerThread = 500;
+    const int greetingPerThread = 5000;
     const int threadCnt = 200;
     std::vector<std::thread> threads;
     threads.reserve(threadCnt);

@@ -11,7 +11,9 @@ Server::Server(unsigned short port, ServerSetting setting)
     : ioc(), port(port), backlog(setting.backlog),
     ioContextPoolSize(setting.ioContextPoolSize),
     logicQueueCapacity(setting.logicQueueCapacity), logicWorkerNum(setting.logicWorkerNum),
-    acceptor(ioc, ip::tcp::endpoint(ip::tcp::v4(), port)) {}
+    acceptor(ioc, ip::tcp::endpoint(ip::tcp::v4(), port)),
+    stopCallback(setting.stopCallback)
+{}
 
 void Server::start() {
     spdlog::info("Server start at port: {}", port);
@@ -21,6 +23,7 @@ void Server::start() {
         ioc.stop();
         IOContextPool::destoryInstance();
         LogicSystem::destoryInstance();
+        if (stopCallback) stopCallback();
     };
     signals.async_wait([&](auto, auto) { stopServer(); });
     try {
@@ -40,7 +43,7 @@ void Server::startAccept() {
             this->sessions.insert({newSession->uuid, newSession});
             auto ep = newSession->getRemoteEndpoint();
             spdlog::debug("{} connected.", newSession->toString());
-            newSession->startRecieving();
+            co_spawn(newSession->socket.get_executor(), newSession->startReceiving(), detached);
 
             startAccept();
         }

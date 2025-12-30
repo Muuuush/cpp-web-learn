@@ -11,6 +11,7 @@ struct ServerSetting {
     int ioContextPoolSize = std::thread::hardware_concurrency();
     int logicQueueCapacity = 1024;
     int logicWorkerNum = 1;
+    std::function<void()> stopCallback;
     ServerSetting() = default;
 };
 
@@ -31,4 +32,6 @@ private:
     const int logicWorkerNum;
     boost::asio::ip::tcp::acceptor acceptor;
     std::unordered_map<boost::uuids::uuid, std::shared_ptr<Session>> sessions;
+
+    std::function<void()> stopCallback;
 };
